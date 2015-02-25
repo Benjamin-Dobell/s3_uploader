@@ -15,6 +15,7 @@ module S3Uploader
       :regexp => /.*/,
       :gzip => false,
       :gzip_working_dir => nil,
+      :gzip_whitelist => nil,
       :time_range => Time.at(0)..(Time.now + (60 * 60 * 24))
     }.merge(options)
 
@@ -61,10 +62,12 @@ module S3Uploader
     end
     total_size = 0
     files = Queue.new
+    gz_whitelist = options[:gzip_whitelist]
 
     Dir.glob("#{source}/**/*").select { |f| !File.directory?(f) }.each do |f|
       if File.basename(f).match(options[:regexp]) && options[:time_range].cover?(File.mtime(f))
-        if options[:gzip] && File.extname(f) != '.gz'
+        extension = File.extname(f).sub(/^\./, '')
+        if options[:gzip] && extension != 'gz' && (gz_whitelist.nil? || gz_whitelist.include?(extension))
           dir, base = File.split(f)
           dir       = dir.sub(source, options[:gzip_working_dir])
           gz_file   = "#{dir}/#{base}.gz"
